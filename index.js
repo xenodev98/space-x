@@ -192,11 +192,20 @@ require('./protection')(ctx); require('./tickets')(ctx); require('./logs')(ctx);
 app.get('/health', (q, s) => s.send('ok'));
 app.use(express.static('public'));
 
+// Le serveur web démarre tout de suite (Render exige un port ouvert), sans attendre la connexion du bot
+app.listen(E.PORT || 3000, '0.0.0.0', () => console.log('Serveur web démarré sur le port ' + (E.PORT || 3000)));
 client.once('ready', async () => {
-  await new REST().setToken(E.DISCORD_TOKEN).put(Routes.applicationGuildCommands(E.CLIENT_ID, E.GUILD_ID), { body: cmds.map(c => c.toJSON()) });
-  app.listen(E.PORT || 3000, () => console.log(`Bot prêt. Dashboard : http://localhost:${E.PORT || 3000}`));
+  console.log('Bot connecté en tant que ' + client.user.tag);
+  try {
+    await new REST().setToken(E.DISCORD_TOKEN).put(Routes.applicationGuildCommands(E.CLIENT_ID, E.GUILD_ID), { body: cmds.map(c => c.toJSON()) });
+    console.log('Commandes enregistrées');
+  } catch (e) { console.error('Enregistrement des commandes impossible :', e.message); }
 });
-client.login(E.DISCORD_TOKEN);
+client.on('error', e => console.error('Erreur client :', e.message));
+client.on('shardError', e => console.error('Erreur gateway :', e.message));
+process.on('unhandledRejection', e => console.error('Erreur non gérée :', e));
+setTimeout(() => { if (!client.isReady()) console.error('Le bot n’est toujours pas connecté après 60 s. Vérifie le token, les intents, ou un blocage de Discord sur l’IP de l’hébergeur.'); }, 60000);
+client.login(E.DISCORD_TOKEN).catch(e => console.error('Connexion Discord impossible :', e.message));
 
 // Sauvegarde automatique de la base dans un salon Discord privé (BACKUP_CHANNEL_ID)
 async function backup() {
