@@ -12,7 +12,7 @@ module.exports = (app, client, E, guild) => {
   const auth = (q, s, n) => {
     const u = sessions.get(cookies(q).sid);
     if (!u || u.exp < Date.now()) return s.status(401).json({ error: 'Non connecté' });
-    const m = guild().members.cache.get(u.id); // droits revérifiés à chaque requête
+    const m = guild()?.members.cache.get(u.id); // droits revérifiés à chaque requête
     if (m && !allowed(m)) { sessions.delete(cookies(q).sid); return s.status(403).json({ error: 'Accès retiré' }); }
     q.user = u; n();
   };
